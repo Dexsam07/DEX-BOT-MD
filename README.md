@@ -4,7 +4,7 @@ This is a WhatsApp bot built using the Baileys library for group management, inc
 
 <div align="center"> 
   <a href="https://git.io/typing-svg"> 
-    <img src="https://readme-typing-svg.demolab.com?font=Ribeye&size=50&pause=1000&color=33ff00&center=true&width=910&height=100&lines=Dex-Bot;Multi+Device+Whatsapp+Bot;Coded+By+Professor" alt="Typing SVG" />
+    <img src="https://readme-typing-svg.demolab.com?font=Ribeye&size=50&pause=1000&color=33ff00&center=true&width=910&height=100&lines=Dex-Bot;Multi+Device+Whatsapp+Bot;Coded+By+Shyam" alt="Typing SVG" />
   </a> 
 </div> 
 
@@ -106,10 +106,10 @@ For further customization and setup guidance, click the button below:
 ### Join Us
 
 <div align="center">
-  <a href="https://t.me/+3QhFUZHx-nhhZmY1">
+  <a href="https://t.me/dexbotmd">
     <img src="https://img.shields.io/badge/Join%20Telegram-0078E7?style=for-the-badge&logo=telegram&logoColor=white" alt="Join Telegram"/>
   </a>
-  <a href="https://whatsapp.com/channel/0029Va90zAnIHphOuO8Msp3A">
+  <a href="https://chat.whatsapp.com/IOEbmfzOD6d9TCjdX5Fi3B">
     <img src="https://img.shields.io/badge/Join%20WhatsApp-25D366?style=for-the-badge&logo=whatsapp&logoColor=white" alt="Join WhatsApp"/>
   </a>
 </div>
@@ -192,7 +192,7 @@ If you like this project, please give it a [⭐️ star on GitHub](https://githu
 
 - [DEX_SHAYAM](https://github.com/Dexsam07)
 - [Baileys](https://github.com/adiwajshing/Baileys)
-- [TechGod143](https://github.com/TechGod143) for pair code
+- [TechGod143](https://github.com/TechGod143) for pair cod
 - [Dgxeon](https://github.com/Dgxeon) for pair code
 
 ---

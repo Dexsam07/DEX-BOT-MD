@@ -1,4 +1,4 @@
-# 🤖 DEX-BOT ULTRA MD 2026 🔥
+# 🤖 DEX-BOT ULTRA MD BOT 2026 🔥
 
 <div align="center"> 
   <a href="https://git.io/typing-svg"> 

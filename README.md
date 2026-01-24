@@ -1,4 +1,4 @@
-# 🤖 DEX-BOT-MD BOT 2026 🔥
+# 🤖 DEX-BOT-MD 2026 🔥
 
 <div align="center"> 
   <a href="https://git.io/typing-svg"> 
@@ -7,7 +7,7 @@
 </div>
 
 <div align="center">
-  <img src="https://d.uguu.se/lqtivuxq.jpg" alt="Dex Bot Ultra" height="350">
+  <img src="https://github.com/Dexsam07/DEX-BOT-MD/raw/main/assets/bot_image.jpg" alt="Dex Bot Ultra" height="350">
 </div>
 
 <div align="center">
@@ -61,7 +61,7 @@
 </a>
 
 ### Step 2: Get Pair Code (Fast & Easy)
-<a href="https://dex-bot-md-pair.onrender.com/pair">
+<a href="https://dex-bot-md-pair.onrender.com/">
   <img src="https://img.shields.io/badge/GET%20PAIR%20CODE-FAST-ff4d4d?style=for-the-badge" alt="Pair Code"/>
 </a>
 

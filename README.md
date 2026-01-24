@@ -8,10 +8,8 @@
 
 ## 🎥 Demo Video
 
-Watch the bot in action:
-
 <div align="center">
-  <video src="https://d.uguu.se/OxUEDtZf.mp4" controls muted autoplay loop width="600"></video>
+  <video src="https://d.uguu.se/OxUEDtZf.mp4" controls muted autoplay loop playsinline width="600"></video>
   <br>
   <em>DEX-BOT-MD Demo - Multi-device WhatsApp Bot</em>
 </div>
@@ -194,14 +192,3 @@ This project contains code from various open source projects:
 · Other libraries as listed in package.json
 
 ```
-
-**Important Note**: The `autoplay` attribute in the video tag may not work on all browsers or platforms due to modern browser restrictions that prevent videos from playing automatically. Users might need to click the play button manually. Also, ensure your video link (`https://d.uguu.se/OxUEDtZf.mp4`) is still active, as temporary hosting services can expire.
-
-To use this:
-1. Go to your GitHub repository
-2. Click on the `README.md` file
-3. Click the edit (pencil) icon
-4. Replace all existing content with the code above
-5. Commit your changes
-
-Let me know if you need any modifications to this README file!

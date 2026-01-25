@@ -3,7 +3,7 @@
 </div>
 
 <a href="https://git.io/typing-svg">
-  <img src="https://readme-typing-svg.demolab.com?font=Black+Ops+One&size=70&pause=500&color=00FF00&center=true&width=1150&height=200&lines=PLEASE+FORK+%26+STAR+⭐+DEX-BOT" alt="Typing SVG" />
+  <img src="https://readme-typing-svg.demolab.com?font=Black+Ops+One&size=70&pause=500&color=00FF00&center=true&width=1150&height=200&lines=PLEASE+FORK+%26+STAR+⭐+DEX-BOT-MD" alt="Typing SVG" />
 </a>
 
 <div align="center">
@@ -55,6 +55,7 @@
 | **Call Blocker**          | ✅     | Reject unknown calls |
 | **Anti-Ban System**       | ✅     | Advanced protection 2026 |
 | **Web Dashboard**         | ✅     | Real-time monitoring & control |
+| **Cloud Backup**          | ✅     | Auto-backup sessions & data |
 
 <p align="center">
 <a href="https://git.io/typing-svg">
@@ -130,8 +131,9 @@
 - Human-like typing indicators  
 - Rate limiting per user  
 - Proxy rotation  
-- Encrypted session storage (AES-256)  
-- Behavior analysis & auto self-healing
+- AES-256 encrypted session storage  
+- AI-based behavior analysis & auto self-healing  
+- Emergency kill switch & session rollback
 
 <!-- Glowing Header -->
 <p align="center">
@@ -153,7 +155,7 @@
 **Summary:**
 💡 **CREDITS & THANKS**
 
-> Built with ❤️ by **Dex Shyam**
+> Built with ❤️ by **Dex Shyam Chaudhari**
 
 - 👤 [Dexsam07](https://github.com/Dexsam07) — Creator & Maintainer  
   - Ultra optimizations, AI integration, 250+ commands, anti-ban system
@@ -163,7 +165,7 @@
   <img src="https://i.imgur.com/dBaSKWF.gif" height="40" width="100%">
 </p>
 
-## 🤖 **DEX-BOT STATUS 2026**
+## 🤖 **DEX-BOT-MD STATUS 2026**
 
 ```diff
 + Project Status: Active & Ultra Optimized

@@ -7,7 +7,7 @@
 </div>
 
 <div align="center">
-  <img src="[https://i.ibb.co/8LRMpvMV/IMG-20260124-WA0006.jpg]" alt="Dex Bot Md" height="350">
+  <img src=["https://i.ibb.co/8LRMpvMV/IMG-20260124-WA0006.jpg"] alt="Dex Bot Md" height="350">
 </div>
 
 <div align="center">

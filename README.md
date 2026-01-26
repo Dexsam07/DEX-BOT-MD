@@ -72,7 +72,7 @@
   <a href="https://dex-bot-md-pair.onrender.com/">
     <img src="https://img.shields.io/badge/GET%20PAIR%20CODE-FAST-ff3366?style=for-the-badge&logo=whatsapp&logoColor=white" alt="Fast Pair"/>
   </a>
-  <a href="https://shyam-md-piar-1.onrender.com/">
+  <a href="https://shyam-md-bot-piar-ex.onrender.com/">
     <img src="https://img.shields.io/badge/Stable%20Pair%20Code-00cc99?style=for-the-badge&logo=whatsapp&logoColor=white" alt="Stable Pair"/>
   </a>
 </p>

@@ -1,6 +1,6 @@
 const settings = {
   packname: 'Dex Bot',
-  author: '‎a',
+  author: '‎A',
   botName: "Dex Bot",
   botOwner: 'Dex Shyam Chaudhari', // Your name
   ownerNumber: '917384287404', //Set your number here without + symbol, just add country code & number without any space

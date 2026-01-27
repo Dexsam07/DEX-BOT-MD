@@ -1,13 +1,13 @@
 /**
  * Dex Bot - A WhatsApp Bot
- * Copyright (c) 2024 Shyam
+ * Copyright (c) 2025 SHYAM
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the MIT License.
  * 
  * Credits:
  * - Baileys Library by @adiwajshing
- * - Pair Code implementation inspired by TechGod143 & DGXEON
+ * - Pair Code implementation inspired by Dexsam07 & DexShyamChaudhari 
  */
 require('./settings')
 const { Boom } = require('@hapi/boom')

@@ -63,7 +63,7 @@ Watch this complete step-by-step video tutorial on how to deploy **DEX-BOT-MD** 
 
 <p align="center">
   <a href="https://www.youtube.com/watch?v=Hmp17yyU9Xc">
-    <img src= "https://i.ibb.co/r2HgZSc/IMG-20260125-WA0015.jpg" alt="DEX-BOT-MD Deployment Tutorial Thumbnail" width="560" style="border-radius:12px; box-shadow: 0 4px 8px rgba(0,0,0,0.3);"/>
+    <img src="https://i.ibb.co/r2HgZSc/IMG-20260125-WA0015.jpg" alt="DEX-BOT-MD Deployment Tutorial Thumbnail" width="560" style="border-radius:12px; box-shadow: 0 4px 8px rgba(0,0,0,0.3);"/>
   </a>
 </p>
 

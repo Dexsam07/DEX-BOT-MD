@@ -81,7 +81,7 @@ Watch this complete step-by-step video tutorial on how to deploy **DEX-BOT-MD** 
 - Test commands like `.menu`
 - Make it 24/7 online
 
-Channel: TX gaming lover | Uploaded: Jan 2026
+Channel: @Dex_shyam_07 | Uploaded: Jan 2026
 
 ---
 

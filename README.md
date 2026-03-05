@@ -148,10 +148,10 @@ Deploy DEX-BOT-MD for **free** (or very low usage) on these platforms. Most supp
 
 ### 2. **Get Pair Code (Ultra Fast)**
 <p align="center">
-  <a href="https://dex-bot-md-pair.zone.id/">
+  <a href="https://as-dex-pair.onrender.com/">
     <img src="https://img.shields.io/badge/GET%20PAIR%20CODE-FAST-ff3366?style=for-the-badge&logo=whatsapp&logoColor=white" alt="Fast Pair"/>
   </a>
-  <a href="https://dex-bot-md-pair-2.zone.id">
+  <a href="https://as-dex-pair.onrender.com/">
     <img src="https://img.shields.io/badge/Stable%20Pair%20Code-00cc99?style=for-the-badge&logo=whatsapp&logoColor=white" alt="Stable Pair"/>
   </a>
 </p>

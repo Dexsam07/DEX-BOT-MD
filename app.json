@@ -35,7 +35,7 @@
     "SESSION_ID": {
       "description": "Put your session id",
       "required": true,
-      "value": ""
+      "value": "AS"
     },
      "REMOVEBG_KEY": {
       "description": "Put your Remove background api key",

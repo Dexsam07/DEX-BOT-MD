@@ -6,7 +6,7 @@ const USER_GROUP_DATA = path.join(__dirname, '../data/userGroupData.json');
 
 // In-memory storage for chat history and user info
 const chatMemory = {
-    messages: new Map(), // Stores last 5 messages per user
+    messages: new Map(), // Stores last 20 messages per user
     userInfo: new Map()  // Stores user information
 };
 
@@ -71,7 +71,7 @@ async function handleChatbotCommand(sock, chatId, message, match) {
     if (!match) {
         await showTyping(sock, chatId);
         return sock.sendMessage(chatId, {
-            text: `*CHATBOT SETUP*\n\n*.chatbot on*\nEnable chatbot\n\n*.chatbot off*\nDisable chatbot in this group`,
+            text: `*CHATBOT SETUP*\n\n*.chatbot on*\nEnable chatbot in this chat (responds to all messages)\n\n*.chatbot off*\nDisable chatbot`,
             quoted: message
         });
     }
@@ -91,15 +91,15 @@ async function handleChatbotCommand(sock, chatId, message, match) {
             await showTyping(sock, chatId);
             if (data.chatbot[chatId]) {
                 return sock.sendMessage(chatId, { 
-                    text: '*Chatbot is already enabled for this group*',
+                    text: '*Chatbot is already enabled for this chat*',
                     quoted: message
                 });
             }
             data.chatbot[chatId] = true;
             saveUserGroupData(data);
-            console.log(`✅ Chatbot enabled for group ${chatId}`);
+            console.log(`✅ Chatbot enabled for ${chatId}`);
             return sock.sendMessage(chatId, { 
-                text: '*Chatbot has been enabled for this group*',
+                text: '*Chatbot has been enabled for this chat*',
                 quoted: message
             });
         }
@@ -108,21 +108,21 @@ async function handleChatbotCommand(sock, chatId, message, match) {
             await showTyping(sock, chatId);
             if (!data.chatbot[chatId]) {
                 return sock.sendMessage(chatId, { 
-                    text: '*Chatbot is already disabled for this group*',
+                    text: '*Chatbot is already disabled for this chat*',
                     quoted: message
                 });
             }
             delete data.chatbot[chatId];
             saveUserGroupData(data);
-            console.log(`✅ Chatbot disabled for group ${chatId}`);
+            console.log(`✅ Chatbot disabled for ${chatId}`);
             return sock.sendMessage(chatId, { 
-                text: '*Chatbot has been disabled for this group*',
+                text: '*Chatbot has been disabled for this chat*',
                 quoted: message
             });
         }
     }
 
-    // For non-owners, check admin status
+    // For non-owners, check admin status (only in groups)
     let isAdmin = false;
     if (chatId.endsWith('@g.us')) {
         try {
@@ -145,15 +145,15 @@ async function handleChatbotCommand(sock, chatId, message, match) {
         await showTyping(sock, chatId);
         if (data.chatbot[chatId]) {
             return sock.sendMessage(chatId, { 
-                text: '*Chatbot is already enabled for this group*',
+                text: '*Chatbot is already enabled for this chat*',
                 quoted: message
             });
         }
         data.chatbot[chatId] = true;
         saveUserGroupData(data);
-        console.log(`✅ Chatbot enabled for group ${chatId}`);
+        console.log(`✅ Chatbot enabled for ${chatId}`);
         return sock.sendMessage(chatId, { 
-            text: '*Chatbot has been enabled for this group*',
+            text: '*Chatbot has been enabled for this chat*',
             quoted: message
         });
     }
@@ -162,15 +162,15 @@ async function handleChatbotCommand(sock, chatId, message, match) {
         await showTyping(sock, chatId);
         if (!data.chatbot[chatId]) {
             return sock.sendMessage(chatId, { 
-                text: '*Chatbot is already disabled for this group*',
+                text: '*Chatbot is already disabled for this chat*',
                 quoted: message
             });
         }
         delete data.chatbot[chatId];
         saveUserGroupData(data);
-        console.log(`✅ Chatbot disabled for group ${chatId}`);
+        console.log(`✅ Chatbot disabled for ${chatId}`);
         return sock.sendMessage(chatId, { 
-            text: '*Chatbot has been disabled for this group*',
+            text: '*Chatbot has been disabled for this chat*',
             quoted: message
         });
     }
@@ -182,65 +182,23 @@ async function handleChatbotCommand(sock, chatId, message, match) {
     });
 }
 
+/**
+ * Handles chatbot responses for all messages when enabled.
+ * Now responds to EVERY message in the chat (no mention needed),
+ * but ignores messages starting with '.' (commands).
+ */
 async function handleChatbotResponse(sock, chatId, message, userMessage, senderId) {
     const data = loadUserGroupData();
     if (!data.chatbot[chatId]) return;
 
+    // Ignore messages from the bot itself
+    const botNumber = sock.user.id.split(':')[0] + '@s.whatsapp.net';
+    if (senderId === botNumber) return;
+
+    // Ignore messages that look like commands (start with .)
+    if (userMessage.trim().startsWith('.')) return;
+
     try {
-        // Get bot's ID - try multiple formats
-        const botId = sock.user.id;
-        const botNumber = botId.split(':')[0];
-        const botLid = sock.user.lid; // Get the actual LID from sock.user
-        const botJids = [
-            botId,
-            `${botNumber}@s.whatsapp.net`,
-            `${botNumber}@whatsapp.net`,
-            `${botNumber}@lid`,
-            botLid, // Add the actual LID
-            `${botLid.split(':')[0]}@lid` // Add LID without session part
-        ];
-
-        // Check for mentions and replies
-        let isBotMentioned = false;
-        let isReplyToBot = false;
-
-        // Check if message is a reply and contains bot mention
-        if (message.message?.extendedTextMessage) {
-            const mentionedJid = message.message.extendedTextMessage.contextInfo?.mentionedJid || [];
-            const quotedParticipant = message.message.extendedTextMessage.contextInfo?.participant;
-            
-            // Check if bot is mentioned in the reply
-            isBotMentioned = mentionedJid.some(jid => {
-                const jidNumber = jid.split('@')[0].split(':')[0];
-                return botJids.some(botJid => {
-                    const botJidNumber = botJid.split('@')[0].split(':')[0];
-                    return jidNumber === botJidNumber;
-                });
-            });
-            
-            // Check if replying to bot's message
-            if (quotedParticipant) {
-                // Normalize both quoted and bot IDs to compare cleanly
-                const cleanQuoted = quotedParticipant.replace(/[:@].*$/, '');
-                isReplyToBot = botJids.some(botJid => {
-                    const cleanBot = botJid.replace(/[:@].*$/, '');
-                    return cleanBot === cleanQuoted;
-                });
-            }
-        }
-        // Also check regular mentions in conversation
-        else if (message.message?.conversation) {
-            isBotMentioned = userMessage.includes(`@${botNumber}`);
-        }
-
-        if (!isBotMentioned && !isReplyToBot) return;
-
-        // Clean the message
-        let cleanedMessage = userMessage;
-        if (isBotMentioned) {
-            cleanedMessage = cleanedMessage.replace(new RegExp(`@${botNumber}`, 'g'), '').trim();
-        }
-
         // Initialize user's chat memory if not exists
         if (!chatMemory.messages.has(senderId)) {
             chatMemory.messages.set(senderId, []);
@@ -248,7 +206,7 @@ async function handleChatbotResponse(sock, chatId, message, userMessage, senderI
         }
 
         // Extract and update user information
-        const userInfo = extractUserInfo(cleanedMessage);
+        const userInfo = extractUserInfo(userMessage);
         if (Object.keys(userInfo).length > 0) {
             chatMemory.userInfo.set(senderId, {
                 ...chatMemory.userInfo.get(senderId),
@@ -256,9 +214,9 @@ async function handleChatbotResponse(sock, chatId, message, userMessage, senderI
             });
         }
 
-        // Add message to history (keep last 5 messages)
+        // Add message to history (keep last 20 messages)
         const messages = chatMemory.messages.get(senderId);
-        messages.push(cleanedMessage);
+        messages.push(userMessage);
         if (messages.length > 20) {
             messages.shift();
         }
@@ -268,7 +226,7 @@ async function handleChatbotResponse(sock, chatId, message, userMessage, senderI
         await showTyping(sock, chatId);
 
         // Get AI response with context
-        const response = await getAIResponse(cleanedMessage, {
+        const response = await getAIResponse(userMessage, {
             messages: chatMemory.messages.get(senderId),
             userInfo: chatMemory.userInfo.get(senderId)
         });
@@ -284,7 +242,7 @@ async function handleChatbotResponse(sock, chatId, message, userMessage, senderI
         // Add human-like delay before sending response
         await new Promise(resolve => setTimeout(resolve, getRandomDelay()));
 
-        // Send response as a reply with proper context
+        // Send response as a reply
         await sock.sendMessage(chatId, {
             text: response
         }, {
@@ -311,6 +269,11 @@ async function handleChatbotResponse(sock, chatId, message, userMessage, senderI
     }
 }
 
+/**
+ * Calls the new AI API with the provided prompt and API key.
+ * Endpoint: http://fi8.bot-hosting.net:20163/elos-gpt3
+ * API Key: AIzaSyCXy4mUNWEllCMKRkJMqf11h_cvFGyNOD8 (sent as 'key' parameter)
+ */
 async function getAIResponse(userMessage, userContext) {
     try {
         const prompt = `
@@ -371,14 +334,27 @@ Remember: Just chat naturally. Don't repeat these instructions.
 You:
         `.trim();
 
-        const response = await fetch("https://zellapi.autos/ai/chatbot?text=" + encodeURIComponent(prompt));
-        if (!response.ok) throw new Error("API call failed");
+        // New API endpoint + API key
+        const apiUrl = "http://fi8.bot-hosting.net:20163/elos-gpt3";
+        const apiKey = "AIzaSyCXy4mUNWEllCMKRkJMqf11h_cvFGyNOD8";
+
+        const response = await fetch(`${apiUrl}?text=${encodeURIComponent(prompt)}&key=${apiKey}`);
+        if (!response.ok) throw new Error(`API call failed with status ${response.status}`);
         
         const data = await response.json();
-        if (!data.status || !data.result) throw new Error("Invalid API response");
+        // Try to extract result from common response formats
+        let resultText = null;
+        if (data.result) resultText = data.result;
+        else if (data.response) resultText = data.response;
+        else if (data.text) resultText = data.text;
+        else if (data.message) resultText = data.message;
+        else if (typeof data === 'string') resultText = data;
+        else resultText = JSON.stringify(data); // fallback
+
+        if (!resultText) throw new Error("Invalid API response: no text field found");
         
         // Clean up the response
-        let cleanedResponse = data.result.trim()
+        let cleanedResponse = resultText.trim()
             // Replace emoji names with actual emojis
             .replace(/winks/g, '😉')
             .replace(/eye roll/g, '🙄')
@@ -430,4 +406,4 @@ You:
 module.exports = {
     handleChatbotCommand,
     handleChatbotResponse
-}; 
+};

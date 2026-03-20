@@ -1,92 +1,138 @@
-const settings = require("../settings");
+const settings = require('../settings');
+const os = require('os');
+
+// Helper for newsletter context (makes messages look forwarded)
+function getNewsletterInfo() {
+    return {
+        forwardingScore: 1,
+        isForwarded: true,
+        forwardedNewsletterMessageInfo: {
+            newsletterJid: '120363406449026172@newsletter',
+            newsletterName: 'DEX SHYAM TECH',
+            serverMessageId: -1
+        }
+    };
+}
+
+// Helper: format uptime in seconds to human-readable string
+function formatUptime(seconds) {
+    const days = Math.floor(seconds / (24 * 3600));
+    seconds %= 24 * 3600;
+    const hours = Math.floor(seconds / 3600);
+    seconds %= 3600;
+    const minutes = Math.floor(seconds / 60);
+    seconds = Math.floor(seconds % 60);
+    let parts = [];
+    if (days > 0) parts.push(`${days}d`);
+    if (hours > 0) parts.push(`${hours}h`);
+    if (minutes > 0) parts.push(`${minutes}m`);
+    if (seconds > 0) parts.push(`${seconds}s`);
+    return parts.join(' ') || '0s';
+}
+
+// Helper: format memory in bytes to MB/GB
+function formatMemory(bytes) {
+    const mb = bytes / (1024 * 1024);
+    if (mb >= 1024) return `${(mb / 1024).toFixed(2)} GB`;
+    return `${mb.toFixed(2)} MB`;
+}
 
 async function aliveCommand(sock, chatId, message) {
     try {
-        const message1 = 
-            `*🌟 Dex Bot is Alive & Kicking! 🌟*\n\n` +
-            `📌 *Version:* ${settings.version}\n` +
-            `📡 *Status:* Online & Ready\n` +
-            `🌍 *Mode:* Public\n` +
-            `👨‍💻 *Developer:* Dex Shyam Chaudhari\n\n` +
+        // System stats
+        const uptimeSec = process.uptime();
+        const uptimeFormatted = formatUptime(uptimeSec);
+        const totalMem = os.totalmem();
+        const freeMem = os.freemem();
+        const usedMem = totalMem - freeMem;
+        const memUsagePercent = ((usedMem / totalMem) * 100).toFixed(1);
+        const platform = `${os.platform()} ${os.release()}`;
+        const cpuCores = os.cpus().length;
 
-            `┌──────────────────────┐\n` +
-            `│      ✨ Features ✨      │\n` +
-            `├──────────────────────┤\n` +
-            `│ • Group Management   │\n` +
-            `│ • Antilink Protection│\n` +
-            `│ • Fun & Games        │\n` +
-            `│ • Sticker Commands   │\n` +
-            `│ • And Many More!     │\n` +
-            `└──────────────────────┘\n\n` +
+        // Build the alive message with sections
+        const aliveText = `
+╔══════════════════════════════════════════╗
+║           🌟 DEX BOT IS ALIVE 🌟          ║
+╠══════════════════════════════════════════╣
+║  📌 Version   : ${settings.version || '5.0.0'}
+║  📡 Status    : 🟢 Online & Ready
+║  ⏱️ Uptime    : ${uptimeFormatted}
+║  💾 RAM       : ${formatMemory(usedMem)} / ${formatMemory(totalMem)} (${memUsagePercent}%)
+║  🖥️ Platform  : ${platform.slice(0, 35)}
+║  🧠 CPU Cores : ${cpuCores}
+║  🌍 Mode      : Public
+║  👨‍💻 Developer : Dex Shyam Chaudhari
+╠══════════════════════════════════════════╣
+║  ✨ FEATURES ✨                           ║
+║  • Group Management   • Antilink Protection
+║  • Fun & Games        • Sticker Commands
+║  • Downloader         • AI Chat
+║  • And Many More!
+╠══════════════════════════════════════════╣
+║  💖 SPECIAL SHAYARI COLLECTION 💖         ║
+╚══════════════════════════════════════════╝
 
-            `💖 *Special Shayari Collection* 💖\n\n` +
+✨ *Best Friend / Bestie* ✨
+✩ *"Hazarō aśhantir madhyē tumi āmār ēkmātrō śhantir jāygā.. 🌟
+Durottotā kilomēṭar halē'ō, dinēr śhēṣē āmār sōb hāsir kāraṇ tumi.. 😄
+Ēi nil digantē ēk chilitē rōd haẏē thēkō śaratkāl, priyō Bēsṭī.."* 💙✨✈️
 
-            `✨ *Best Friend / Bestie* ✨\n` +
-            `✩ *"Hazarō aśhantir madhyē tumi āmār ēkmātrō śhantir jāygā.. 🌟\n` +
-            `Durottotā kilomēṭar halē'ō, dinēr śhēṣē āmār sōb hāsir kāraṇ tumi.. 😄\n` +
-            `Ēi nil digantē ēk chilitē rōd haẏē thēkō śaratkāl, priyō Bēsṭī.."* 💙✨✈️ ✩\n\n` +
+🎀 *Banglish Translation:* 🎀
+"হাজারো অশান্তির মধ্যে তুমি আমার একমাত্র শান্তির জায়গা.. 🌟
+দূরত্বটা কিলোমিটার হলেও, দিনের শেষে আমার সব হাসির কারণ তুমি.. 😄
+এই নীল দিগন্তে এক চিলতে রোদ হয়ে থাকো শরৎকাল, প্রিয় বেস্টি.."* 💙✨✈️
 
-            `🎀 *Banglish Translation:* 🎀\n` +
-            `"হাজারো অশান্তির মধ্যে তুমি আমার একমাত্র শান্তির জায়গা.. 🌟\n` +
-            `দূরত্বটা কিলোমিটার হলেও, দিনের শেষে আমার সব হাসির কারণ তুমি.. 😄\n` +
-            `এই নীল দিগন্তে এক চিলতে রোদ হয়ে থাকো শরৎকাল, প্রিয় বেস্টি.."* 💙✨✈️ ✩\n\n` +
+💕 *Ekta Cute Shayari:* 💕
+"Bestie tumi amaar life er chocolate syrup.. 🍫
+Je kono muhurte add korle sob mishti kore deo! 🍯✨
+Distance thakle'o feeling ta kachhe-i.. 🥰
+Coz tumi amaar heart er permanent guest! 🏡💖"
 
-            `💕 *Ekta Cute Shayari:* 💕\n` +
-            `"Bestie tumi amaar life er chocolate syrup.. 🍫\n` +
-            `Je kono muhurte add korle sob mishti kore deo! 🍯✨\n` +
-            `Distance thakle'o feeling ta kachhe-i.. 🥰\n` +
-            `Coz tumi amaar heart er permanent guest! 🏡💖"*\n\n` +
+🌸 *Banglish Translation:* 🌸
+"বেস্টি তুমি আমার লাইফের চকোলেট সিরাপ.. 🍫
+যে কোনো মুহূর্তে অ্যাড করলে সব মিষ্টি করে দাও! 🍯✨
+দূরত্ব থাকলেও ফিলিংটা কাছেই.. 🥰
+কারণ তুমি আমার হার্টের পার্মানেন্ট গেস্ট! 🏡💖"
 
-            `🌸 *Banglish Translation:* 🌸\n` +
-            `"বেস্টি তুমি আমার লাইফের চকোলেট সিরাপ.. 🍫\n` +
-            `যে কোনো মুহূর্তে অ্যাড করলে সব মিষ্টি করে দাও! 🍯✨\n` +
-            `দূরত্ব থাকলেও ফিলিংটা কাছেই.. 🥰\n` +
-            `কারণ তুমি আমার হার্টের পার্মানেন্ট গেস্ট! 🏡💖"*\n\n` +
+💔 *Emotional Shayari:* 💔
+"Tu..pahle aa to sahi..🥺
+Ek baar..nazrein mila to sahi..😳
+Main...janaze se bhi uth ke wapas aa jaunga..🥹
+Bas ek baar..awaaz laga to sahi..❤️‍🩹🥀"
 
-            `💔 *Emotional Shayari:* 💔\n` +
-            `"Tu..pahle aa to sahi..🥺\n` +
-            `Ek baar..nazrein mila to sahi..😳\n` +
-            `Main...janaze se bhi uth ke wapas aa jaunga..🥹\n` +
-            `Bas ek baar..awaaz laga to sahi..❤️‍🩹🥀"\n\n` +
+📝 *English Meaning:* 📝
+"You.. just come first..🥺
+Just once.. meet my eyes..😳
+I... will rise even from the funeral and come back..🥹
+Just once.. call out to me..❤️‍🩹🥀"
 
-            `📝 *English Meaning:* 📝\n` +
-            `"You.. just come first..🥺\n` +
-            `Just once.. meet my eyes..😳\n` +
-            `I... will rise even from the funeral and come back..🥹\n` +
-            `Just once.. call out to me..❤️‍🩹🥀"\n\n` +
+💡 *Bestie Care Tips* 💡
+🤗 *Daily Check-in:* Proti din ekta "Ki koro?" message pathao! 💌
+😂 *Fun Time:* Week a ekta funny meme/video share koro! 📹
+🎉 *Surprise:* Random e ekta cute sticker/card pathao! 🎁
+👯 *Memory:* Proti mashe purono photo memory share koro! 📸
+💬 *Support:* Kono problem hole phone kore shono! 🤝
 
-            `💡 *Bestie Care Tips* 💡\n` +
-            `🤗 *Daily Check-in:* Proti din ekta "Ki koro?" message pathao! 💌\n` +
-            `😂 *Fun Time:* Week a ekta funny meme/video share koro! 📹\n` +
-            `🎉 *Surprise:* Random e ekta cute sticker/card pathao! 🎁\n` +
-            `👯 *Memory:* Proti mashe purono photo memory share koro! 📸\n` +
-            `💬 *Support:* Kono problem hole phone kore shono! 🤝\n\n` +
+✨ *Friendship Mantra:* ✨
+"True friendship doesn't count miles.. 📏
+It counts smiles, memories & care! 😊💫
+A bestie is a sister from another mother! 👭✨
+Distance makes the heart grow fonder! 💞🌍"
 
-            `✨ *Friendship Mantra:* ✨\n` +
-            `"True friendship doesn't count miles.. 📏\n` +
-            `It counts smiles, memories & care! 😊💫\n` +
-            `A bestie is a sister from another mother! 👭✨\n` +
-            `Distance makes the heart grow fonder! 💞🌍"\n\n` +
+🚀 *Type .menu to see the full command list!* 🚀
+        `.trim();
 
-            `Type *.menu* to see the full command list! 🚀`;
-
+        // Send the alive message
         await sock.sendMessage(chatId, {
-            text: message1,
-            contextInfo: {
-                forwardingScore: 999,
-                isForwarded: true,
-                forwardedNewsletterMessageInfo: {
-                    newsletterJid: '120363406449026172@newsletter',
-                    newsletterName: 'Dex MD',
-                    serverMessageId: -1
-                }
-            }
+            text: aliveText,
+            contextInfo: getNewsletterInfo()
         }, { quoted: message });
 
     } catch (error) {
         console.error('Error in alive command:', error);
-        await sock.sendMessage(chatId, { 
-            text: 'Bot is alive and running! 🔥' 
+        await sock.sendMessage(chatId, {
+            text: '🔥 Bot is alive and running! (Error fetching detailed stats)',
+            contextInfo: getNewsletterInfo()
         }, { quoted: message });
     }
 }

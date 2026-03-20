@@ -1,92 +1,152 @@
 const { isAdmin } = require('../lib/isAdmin');
 
-// Function to handle manual promotions via command
-async function promoteCommand(sock, chatId, mentionedJids, message) {
-    let userToPromote = [];
-    
-    // Check for mentioned users
-    if (mentionedJids && mentionedJids.length > 0) {
-        userToPromote = mentionedJids;
-    }
-    // Check for replied message
-    else if (message.message?.extendedTextMessage?.contextInfo?.participant) {
-        userToPromote = [message.message.extendedTextMessage.contextInfo.participant];
-    }
-    
-    // If no user found through either method
-    if (userToPromote.length === 0) {
-        await sock.sendMessage(chatId, { 
-            text: 'Please mention the user or reply to their message to promote!'
-        });
-        return;
-    }
-
-    try {
-        await sock.groupParticipantsUpdate(chatId, userToPromote, "promote");
-        
-        // Get usernames for each promoted user
-        const usernames = await Promise.all(userToPromote.map(async jid => {
-            
-            return `@${jid.split('@')[0]}`;
-        }));
-
-        // Get promoter's name (the bot user in this case)
-        const promoterJid = sock.user.id;
-        
-        const promotionMessage = `*『 GROUP PROMOTION 』*\n\n` +
-            `👥 *Promoted User${userToPromote.length > 1 ? 's' : ''}:*\n` +
-            `${usernames.map(name => `• ${name}`).join('\n')}\n\n` +
-            `👑 *Promoted By:* @${promoterJid.split('@')[0]}\n\n` +
-            `📅 *Date:* ${new Date().toLocaleString()}`;
-        await sock.sendMessage(chatId, { 
-            text: promotionMessage,
-            mentions: [...userToPromote, promoterJid]
-        });
-    } catch (error) {
-        console.error('Error in promote command:', error);
-        await sock.sendMessage(chatId, { text: 'Failed to promote user(s)!'});
-    }
+// Helper for newsletter context
+function getNewsletterInfo() {
+    return {
+        forwardingScore: 1,
+        isForwarded: true,
+        forwardedNewsletterMessageInfo: {
+            newsletterJid: '120363406449026172@newsletter',
+            newsletterName: 'DEX SHYAM TECH',
+            serverMessageId: -1
+        }
+    };
 }
 
-// Function to handle automatic promotion detection
-async function handlePromotionEvent(sock, groupId, participants, author) {
+// Manual promotion command
+async function promoteCommand(sock, chatId, mentionedJids, message) {
     try {
-        // Safety check for participants
-        if (!Array.isArray(participants) || participants.length === 0) {
+        // Ensure it's a group
+        if (!chatId.endsWith('@g.us')) {
+            await sock.sendMessage(chatId, {
+                text: '⚠️ Ye command sirf group mein use kar sakte ho!',
+                contextInfo: getNewsletterInfo()
+            }, { quoted: message });
             return;
         }
 
-        // Get usernames for promoted participants
-        const promotedUsernames = await Promise.all(participants.map(async jid => {
-            // Handle case where jid might be an object or not a string
-            const jidString = typeof jid === 'string' ? jid : (jid.id || jid.toString());
-            return `@${jidString.split('@')[0]} `;
-        }));
+        // Get sender info
+        const senderId = message.key.participant || message.key.remoteJid;
 
-        let promotedBy;
-        let mentionList = participants.map(jid => {
-            // Ensure all mentions are proper JID strings
-            return typeof jid === 'string' ? jid : (jid.id || jid.toString());
-        });
-
-        if (author && author.length > 0) {
-            // Ensure author has the correct format
-            const authorJid = typeof author === 'string' ? author : (author.id || author.toString());
-            promotedBy = `@${authorJid.split('@')[0]}`;
-            mentionList.push(authorJid);
-        } else {
-            promotedBy = 'System';
+        // Admin checks
+        const { isSenderAdmin, isBotAdmin } = await isAdmin(sock, chatId, senderId);
+        if (!isBotAdmin) {
+            await sock.sendMessage(chatId, {
+                text: '❌ Bot ko admin banana hoga pehle!',
+                contextInfo: getNewsletterInfo()
+            }, { quoted: message });
+            return;
+        }
+        if (!isSenderAdmin && !message.key.fromMe) {
+            await sock.sendMessage(chatId, {
+                text: '⛔ Sirf group admin hi promote command use kar sakta hai!',
+                contextInfo: getNewsletterInfo()
+            }, { quoted: message });
+            return;
         }
 
-        const promotionMessage = `*『 GROUP PROMOTION 』*\n\n` +
-            `👥 *Promoted User${participants.length > 1 ? 's' : ''}:*\n` +
-            `${promotedUsernames.map(name => `• ${name}`).join('\n')}\n\n` +
-            `👑 *Promoted By:* ${promotedBy}\n\n` +
-            `📅 *Date:* ${new Date().toLocaleString()}`;
-        
+        // Determine users to promote
+        let usersToPromote = [];
+        const ctxInfo = message.message?.extendedTextMessage?.contextInfo || {};
+
+        if (mentionedJids && mentionedJids.length > 0) {
+            usersToPromote = mentionedJids;
+        } else if (ctxInfo.participant) {
+            usersToPromote = [ctxInfo.participant];
+        }
+
+        if (usersToPromote.length === 0) {
+            await sock.sendMessage(chatId, {
+                text: '⚠️ Kisi user ko mention karo ya reply karke .promote likho!',
+                contextInfo: getNewsletterInfo()
+            }, { quoted: message });
+            return;
+        }
+
+        // Get group metadata to check current admins
+        const groupMetadata = await sock.groupMetadata(chatId);
+        const currentAdmins = groupMetadata.participants.filter(p => p.admin).map(p => p.id);
+
+        // Filter out users who are already admins
+        const alreadyAdmins = usersToPromote.filter(jid => currentAdmins.includes(jid));
+        const validUsers = usersToPromote.filter(jid => !currentAdmins.includes(jid));
+
+        if (validUsers.length === 0) {
+            const alreadyMsg = alreadyAdmins.map(jid => `@${jid.split('@')[0]}`).join(', ');
+            await sock.sendMessage(chatId, {
+                text: `⚠️ ${alreadyMsg} already admin hai!`,
+                mentions: alreadyAdmins,
+                contextInfo: getNewsletterInfo()
+            }, { quoted: message });
+            return;
+        }
+
+        // Prevent promoting the bot itself
+        const botJid = sock.user.id;
+        if (validUsers.includes(botJid)) {
+            await sock.sendMessage(chatId, {
+                text: '🤖 Main khud ko promote nahi kar sakta!',
+                contextInfo: getNewsletterInfo()
+            }, { quoted: message });
+            return;
+        }
+
+        // Perform promotion
+        await sock.groupParticipantsUpdate(chatId, validUsers, "promote");
+
+        // Prepare success message
+        const usernames = validUsers.map(jid => `@${jid.split('@')[0]}`);
+        const promoter = `@${senderId.split('@')[0]}`;
+        const promotionMsg = `✨ *PROMOTION SUCCESSFUL* ✨\n\n` +
+            `👥 ${validUsers.length > 1 ? 'Promoted Users' : 'Promoted User'}:\n` +
+            `${usernames.map(name => `• ${name}`).join('\n')}\n\n` +
+            `👑 Promoted By: ${promoter}\n` +
+            `📅 Date: ${new Date().toLocaleString()}\n\n` +
+            `🎉 Ab ye bhi admin ban gaye!`;
+
+        await sock.sendMessage(chatId, {
+            text: promotionMsg,
+            mentions: [...validUsers, senderId],
+            contextInfo: getNewsletterInfo()
+        }, { quoted: message });
+
+    } catch (error) {
+        console.error('Error in promote command:', error);
+        await sock.sendMessage(chatId, {
+            text: '❌ Promote karne mein problem hui! Try again later.',
+            contextInfo: getNewsletterInfo()
+        }, { quoted: message });
+    }
+}
+
+// Automatic promotion event handler (when someone is promoted via WhatsApp)
+async function handlePromotionEvent(sock, groupId, participants, author) {
+    try {
+        if (!Array.isArray(participants) || participants.length === 0) return;
+
+        // Convert participants to JID strings
+        const promotedJids = participants.map(p => typeof p === 'string' ? p : (p.id || p.toString()));
+        const authorJid = author ? (typeof author === 'string' ? author : (author.id || author.toString())) : null;
+
+        // Prepare mentions
+        const mentions = [...promotedJids];
+        if (authorJid) mentions.push(authorJid);
+
+        // Get usernames for display
+        const usernames = promotedJids.map(jid => `@${jid.split('@')[0]}`);
+
+        const promotedBy = authorJid ? `@${authorJid.split('@')[0]}` : 'System';
+
+        const promotionMessage = `✨ *GROUP PROMOTION* ✨\n\n` +
+            `👥 ${promotedJids.length > 1 ? 'Promoted Users' : 'Promoted User'}:\n` +
+            `${usernames.map(name => `• ${name}`).join('\n')}\n\n` +
+            `👑 Promoted By: ${promotedBy}\n` +
+            `📅 Date: ${new Date().toLocaleString()}`;
+
         await sock.sendMessage(groupId, {
             text: promotionMessage,
-            mentions: mentionList
+            mentions,
+            contextInfo: getNewsletterInfo()
         });
     } catch (error) {
         console.error('Error handling promotion event:', error);

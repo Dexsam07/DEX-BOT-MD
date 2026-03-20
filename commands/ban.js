@@ -1,80 +1,141 @@
 const fs = require('fs');
+const path = require('path');
 const { channelInfo } = require('../lib/messageConfig');
 const isAdmin = require('../lib/isAdmin');
 const { isSudo } = require('../lib/index');
+const settings = require('../settings');
+
+// Helper for newsletter context
+function getNewsletterInfo() {
+    return {
+        forwardingScore: 1,
+        isForwarded: true,
+        forwardedNewsletterMessageInfo: {
+            newsletterJid: '120363406449026172@newsletter',
+            newsletterName: 'DEX SHYAM TECH',
+            serverMessageId: -1
+        }
+    };
+}
+
+// Path to banned users file
+const DATA_DIR = path.join(__dirname, '../data');
+const BANNED_FILE = path.join(DATA_DIR, 'banned.json');
+
+// Ensure data directory exists
+if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+if (!fs.existsSync(BANNED_FILE)) fs.writeFileSync(BANNED_FILE, '[]');
+
+// Helper to load banned list
+function loadBanned() {
+    try {
+        const data = fs.readFileSync(BANNED_FILE, 'utf8');
+        return JSON.parse(data);
+    } catch {
+        return [];
+    }
+}
+
+// Helper to save banned list
+function saveBanned(banned) {
+    try {
+        fs.writeFileSync(BANNED_FILE, JSON.stringify(banned, null, 2));
+        return true;
+    } catch {
+        return false;
+    }
+}
 
 async function banCommand(sock, chatId, message) {
-    // Restrict in groups to admins; in private to owner/sudo
-    const isGroup = chatId.endsWith('@g.us');
-    if (isGroup) {
-        const senderId = message.key.participant || message.key.remoteJid;
-        const { isSenderAdmin, isBotAdmin } = await isAdmin(sock, chatId, senderId);
-        if (!isBotAdmin) {
-            await sock.sendMessage(chatId, { text: 'Please make the bot an admin to use .ban', ...channelInfo }, { quoted: message });
-            return;
-        }
-        if (!isSenderAdmin && !message.key.fromMe) {
-            await sock.sendMessage(chatId, { text: 'Only group admins can use .ban', ...channelInfo }, { quoted: message });
-            return;
-        }
-    } else {
-        const senderId = message.key.participant || message.key.remoteJid;
-        const senderIsSudo = await isSudo(senderId);
-        if (!message.key.fromMe && !senderIsSudo) {
-            await sock.sendMessage(chatId, { text: 'Only owner/sudo can use .ban in private chat', ...channelInfo }, { quoted: message });
-            return;
-        }
-    }
-    let userToBan;
-    
-    // Check for mentioned users
-    if (message.message?.extendedTextMessage?.contextInfo?.mentionedJid?.length > 0) {
-        userToBan = message.message.extendedTextMessage.contextInfo.mentionedJid[0];
-    }
-    // Check for replied message
-    else if (message.message?.extendedTextMessage?.contextInfo?.participant) {
-        userToBan = message.message.extendedTextMessage.contextInfo.participant;
-    }
-    
-    if (!userToBan) {
-        await sock.sendMessage(chatId, { 
-            text: 'Please mention the user or reply to their message to ban!', 
-            ...channelInfo 
-        });
-        return;
-    }
-
-    // Prevent banning the bot itself
     try {
-        const botId = sock.user.id.split(':')[0] + '@s.whatsapp.net';
-        if (userToBan === botId || userToBan === botId.replace('@s.whatsapp.net', '@lid')) {
-            await sock.sendMessage(chatId, { text: 'You cannot ban the bot account.', ...channelInfo }, { quoted: message });
-            return;
-        }
-    } catch {}
+        const isGroup = chatId.endsWith('@g.us');
+        const senderId = message.key.participant || message.key.remoteJid;
 
-    try {
-        // Add user to banned list
-        const bannedUsers = JSON.parse(fs.readFileSync('./data/banned.json'));
-        if (!bannedUsers.includes(userToBan)) {
-            bannedUsers.push(userToBan);
-            fs.writeFileSync('./data/banned.json', JSON.stringify(bannedUsers, null, 2));
-            
-            await sock.sendMessage(chatId, { 
-                text: `Successfully banned @${userToBan.split('@')[0]}!`,
-                mentions: [userToBan],
-                ...channelInfo 
-            });
+        // Permission checks
+        if (isGroup) {
+            const { isSenderAdmin, isBotAdmin } = await isAdmin(sock, chatId, senderId);
+            if (!isBotAdmin) {
+                await sock.sendMessage(chatId, {
+                    text: '❌ *Bot ko admin banana hoga pehle!*',
+                    contextInfo: getNewsletterInfo()
+                }, { quoted: message });
+                return;
+            }
+            if (!isSenderAdmin && !message.key.fromMe) {
+                await sock.sendMessage(chatId, {
+                    text: '⛔ *Sirf group admin hi .ban use kar sakta hai!*',
+                    contextInfo: getNewsletterInfo()
+                }, { quoted: message });
+                return;
+            }
         } else {
-            await sock.sendMessage(chatId, { 
-                text: `${userToBan.split('@')[0]} is already banned!`,
+            const senderIsSudo = await isSudo(senderId);
+            if (!message.key.fromMe && !senderIsSudo) {
+                await sock.sendMessage(chatId, {
+                    text: '🔒 *Sirf bot owner/sudo private chat me .ban use kar sakta hai.*',
+                    contextInfo: getNewsletterInfo()
+                }, { quoted: message });
+                return;
+            }
+        }
+
+        // Determine target user
+        let userToBan = null;
+        const ctxInfo = message.message?.extendedTextMessage?.contextInfo || {};
+        if (ctxInfo.mentionedJid?.length > 0) {
+            userToBan = ctxInfo.mentionedJid[0];
+        } else if (ctxInfo.participant) {
+            userToBan = ctxInfo.participant;
+        }
+
+        if (!userToBan) {
+            await sock.sendMessage(chatId, {
+                text: '⚠️ *Kisi user ko mention karo ya reply karke .ban likho!*\nExample: `.ban @user`',
+                contextInfo: getNewsletterInfo()
+            }, { quoted: message });
+            return;
+        }
+
+        // Prevent banning the bot itself
+        const botId = sock.user.id.split(':')[0] + '@s.whatsapp.net';
+        const botLid = sock.user.lid || '';
+        if (userToBan === botId || userToBan === botLid || userToBan.split('@')[0] === botId.split('@')[0]) {
+            await sock.sendMessage(chatId, {
+                text: '🤖 *Main khud ko ban nahi kar sakta!*',
+                contextInfo: getNewsletterInfo()
+            }, { quoted: message });
+            return;
+        }
+
+        // Load current banned list
+        let banned = loadBanned();
+        if (!banned.includes(userToBan)) {
+            banned.push(userToBan);
+            if (saveBanned(banned)) {
+                await sock.sendMessage(chatId, {
+                    text: `✅ *@${userToBan.split('@')[0]} ko ban kar diya gaya hai!*\nAb ye bot ke saare commands use nahi kar sakta.`,
+                    mentions: [userToBan],
+                    contextInfo: getNewsletterInfo()
+                }, { quoted: message });
+            } else {
+                await sock.sendMessage(chatId, {
+                    text: '❌ *Ban karne me error aaya. File permission check karo.*',
+                    contextInfo: getNewsletterInfo()
+                }, { quoted: message });
+            }
+        } else {
+            await sock.sendMessage(chatId, {
+                text: `⚠️ *@${userToBan.split('@')[0]} already banned hai!*`,
                 mentions: [userToBan],
-                ...channelInfo 
-            });
+                contextInfo: getNewsletterInfo()
+            }, { quoted: message });
         }
     } catch (error) {
-        console.error('Error in ban command:', error);
-        await sock.sendMessage(chatId, { text: 'Failed to ban user!', ...channelInfo });
+        console.error('Ban command error:', error);
+        await sock.sendMessage(chatId, {
+            text: '❌ *Kuch gadbad ho gayi. Try again later.*',
+            contextInfo: getNewsletterInfo()
+        }, { quoted: message });
     }
 }
 

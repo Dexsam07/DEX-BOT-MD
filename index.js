@@ -52,45 +52,157 @@ store.readFromFile()
 const settings = require('./settings')
 setInterval(() => store.writeToFile(), settings.storeWriteInterval || 10000)
 
-// Memory optimization - Force garbage collection if available
+// Memory optimization
 setInterval(() => {
     if (global.gc) {
         global.gc()
         console.log('🧹 Garbage collection completed')
     }
-}, 60_000) // every 1 minute
+}, 60_000)
 
-// Memory monitoring - Restart if RAM gets too high
+// Memory monitoring
 setInterval(() => {
     const used = process.memoryUsage().rss / 1024 / 1024
     if (used > 400) {
         console.log('⚠️ RAM too high (>400MB), restarting bot...')
-        process.exit(1) // Panel will auto-restart
+        process.exit(1)
     }
-}, 30_000) // check every 30 seconds
+}, 30_000)
 
-let phoneNumber = "917384287404"
+// ✅ Owner number – sirf display ke liye, pairing ke liye nahi
 let owner = JSON.parse(fs.readFileSync('./data/owner.json'))
 
 global.botname = "Dex-Bot-md"
 global.themeemoji = "•"
-// ✅ ADDED: custom pairing code (8 characters)
-const customPairingCode = "DEXSHYAM";
-const pairingCode = !!phoneNumber || process.argv.includes("--pairing-code")
+const customPairingCode = "DEXSHYAM";   // 8-digit custom code
+
+// ✅ Always pairing code – QR never shows
+const pairingCode = true;
 const useMobile = process.argv.includes("--mobile")
 
-// Only create readline interface if we're in an interactive environment
-const rl = process.stdin.isTTY ? readline.createInterface({ input: process.stdin, output: process.stdout }) : null
+// ✅ question() – creates new readline each time
 const question = (text) => {
-    if (rl) {
-        return new Promise((resolve) => rl.question(text, resolve))
-    } else {
-        return Promise.resolve(settings.ownerNumber || phoneNumber)
+    return new Promise((resolve) => {
+        const rl = readline.createInterface({
+            input: process.stdin,
+            output: process.stdout
+        });
+        rl.question(text, (answer) => {
+            rl.close();
+            resolve(answer);
+        });
+    });
+};
+
+// ✅ Function to create session from SESSION_ID (base64)
+function createSessionFromID(sessionId) {
+    try {
+        const sessionPath = './session';
+        if (!fs.existsSync(sessionPath)) {
+            fs.mkdirSync(sessionPath, { recursive: true });
+        }
+        const credsPath = path.join(sessionPath, 'creds.json');
+        const credsData = JSON.parse(Buffer.from(sessionId, 'base64').toString('utf-8'));
+        fs.writeFileSync(credsPath, JSON.stringify(credsData, null, 2));
+        console.log(chalk.green('✅ Session created from SESSION_ID.'));
+        return true;
+    } catch (e) {
+        console.log(chalk.red('❌ Failed to create session from SESSION_ID:', e.message));
+        return false;
+    }
+}
+
+// ✅ Validate and clean session
+function validateAndCleanSession() {
+    const sessionPath = './session/creds.json'
+    if (fs.existsSync(sessionPath)) {
+        try {
+            const creds = JSON.parse(fs.readFileSync(sessionPath, 'utf8'))
+            if (!creds.me || !creds.me.id) {
+                throw new Error('Invalid session structure')
+            }
+            console.log(chalk.green('✅ Session seems valid.'))
+            return true
+        } catch (e) {
+            console.log(chalk.yellow('⚠️ Invalid session found, deleting...'))
+            try {
+                rmSync('./session', { recursive: true, force: true })
+                console.log(chalk.green('🗑️ Session folder removed.'))
+            } catch (err) {
+                console.error('Failed to delete session:', err)
+            }
+            return false
+        }
+    }
+    return false
+}
+
+function sessionExistsAndValid() {
+    const sessionPath = './session/creds.json'
+    if (!fs.existsSync(sessionPath)) return false;
+    try {
+        const creds = JSON.parse(fs.readFileSync(sessionPath, 'utf8'))
+        return !!(creds.me && creds.me.id);
+    } catch {
+        return false;
     }
 }
 
 async function startXeonBotInc() {
     try {
+        // ✅ Step 1: Check for SESSION_ID in config.js or global
+        let sessionId = null;
+        try {
+            const config = require('./config.js');
+            if (config.SESSION_ID) {
+                sessionId = config.SESSION_ID;
+                console.log(chalk.blue('📱 Found SESSION_ID in config.js'));
+            }
+        } catch (e) { /* config.js not found */ }
+        
+        if (!sessionId && typeof global !== 'undefined' && global.SESSION_ID) {
+            sessionId = global.SESSION_ID;
+            console.log(chalk.blue('📱 Found SESSION_ID in global (config.js)'));
+        }
+        
+        if (!sessionId && process.env.SESSION_ID) {
+            sessionId = process.env.SESSION_ID;
+            console.log(chalk.blue('📱 Found SESSION_ID in environment'));
+        }
+
+        // ✅ Step 2: If SESSION_ID exists, create session from it
+        if (sessionId) {
+            const created = createSessionFromID(sessionId);
+            if (!created) {
+                console.log(chalk.yellow('⚠️ Failed to create session from SESSION_ID. Will try other methods.'));
+            }
+        }
+
+        // ✅ Step 3: Validate session (if exists)
+        validateAndCleanSession()
+
+        // ✅ Step 4: Get phone number for pairing (if needed)
+        let phoneNumber = null;
+        
+        // Check PAIRING_NUMBER from config/global/env
+        try {
+            const config = require('./config.js');
+            if (config.PAIRING_NUMBER) {
+                phoneNumber = config.PAIRING_NUMBER;
+                console.log(chalk.blue('📱 Found PAIRING_NUMBER in config.js'));
+            }
+        } catch (e) { /* config.js not found */ }
+        
+        if (!phoneNumber && typeof global !== 'undefined' && global.PAIRING_NUMBER) {
+            phoneNumber = global.PAIRING_NUMBER;
+            console.log(chalk.blue('📱 Found PAIRING_NUMBER in global (config.js)'));
+        }
+        
+        if (!phoneNumber && process.env.PAIRING_NUMBER) {
+            phoneNumber = process.env.PAIRING_NUMBER;
+            console.log(chalk.blue('📱 Found PAIRING_NUMBER in environment'));
+        }
+
         let { version, isLatest } = await fetchLatestBaileysVersion()
         const { state, saveCreds } = await useMultiFileAuthState(`./session`)
         const msgRetryCounterCache = new NodeCache()
@@ -118,9 +230,7 @@ async function startXeonBotInc() {
             keepAliveIntervalMs: 10000,
         })
 
-        // Save credentials when they update
         XeonBotInc.ev.on('creds.update', saveCreds)
-
         store.bind(XeonBotInc.ev)
 
         // Message handling
@@ -133,7 +243,6 @@ async function startXeonBotInc() {
                     await handleStatus(XeonBotInc, chatUpdate);
                     return;
                 }
-                // Private mode check
                 if (!XeonBotInc.public && !mek.key.fromMe && chatUpdate.type === 'notify') {
                     const isGroup = mek.key?.remoteJid?.endsWith('@g.us')
                     if (!isGroup) return
@@ -168,7 +277,6 @@ async function startXeonBotInc() {
             }
         })
 
-        // Decode JID
         XeonBotInc.decodeJid = (jid) => {
             if (!jid) return jid
             if (/:\d+@/gi.test(jid)) {
@@ -184,7 +292,6 @@ async function startXeonBotInc() {
             }
         })
 
-        // Improved getName (fixed)
         XeonBotInc.getName = async (jid, withoutContact = false) => {
             let id = XeonBotInc.decodeJid(jid)
             withoutContact = XeonBotInc.withoutContact || withoutContact
@@ -210,58 +317,76 @@ async function startXeonBotInc() {
         XeonBotInc.public = true
         XeonBotInc.serializeM = (m) => smsg(XeonBotInc, m, store)
 
-        // Handle pairing code with custom code
+        // ✅ Step 5: Pairing code logic
         if (pairingCode && !XeonBotInc.authState.creds.registered) {
-            if (useMobile) throw new Error('Cannot use pairing code with mobile api')
-
-            let phoneNumber
-            if (!!global.phoneNumber) {
-                phoneNumber = global.phoneNumber
+            if (sessionExistsAndValid()) {
+                console.log(chalk.green('✅ Valid session found, skipping pairing.'));
             } else {
-                phoneNumber = await question(chalk.bgBlack(chalk.greenBright(`Please type your WhatsApp number 😍\nFormat: 917384287404 (without + or spaces) : `)))
-            }
+                if (useMobile) throw new Error('Cannot use pairing code with mobile api')
 
-            phoneNumber = phoneNumber.replace(/[^0-9]/g, '')
-            const pn = require('awesome-phonenumber');
-            if (!pn('+' + phoneNumber).isValid()) {
-                console.log(chalk.red('Invalid phone number. Please enter your full international number (e.g., 15551234567 for US, 447911123456 for UK, etc.) without + or spaces.'));
-                process.exit(1);
-            }
-
-            setTimeout(async () => {
-                try {
-                    // ✅ ADDED: pass customPairingCode as second argument
-                    let code = await XeonBotInc.requestPairingCode(phoneNumber.trim(), customPairingCode);
-                    code = code?.match(/.{1,4}/g)?.join("-") || code
-                    console.log(chalk.black(chalk.bgGreen(`Your Pairing Code : `)), chalk.black(chalk.white(code)))
-                    console.log(chalk.yellow(`\nPlease enter this code in your WhatsApp app:\n1. Open WhatsApp\n2. Go to Settings > Linked Devices\n3. Tap "Link a Device"\n4. Enter the code shown above`))
-                } catch (error) {
-                    console.error('Error requesting pairing code:', error)
-                    console.log(chalk.red('Failed to get pairing code. Please check your phone number and try again.'))
+                let phoneNumberInput = phoneNumber;
+                
+                // ✅ If no PAIRING_NUMBER, prompt user
+                if (!phoneNumberInput) {
+                    console.log(chalk.yellow('\n📱 No PAIRING_NUMBER found in config or environment.'));
+                    phoneNumberInput = await question(chalk.bgBlack(chalk.greenBright(`Enter your WhatsApp number (without + or spaces): `)));
+                } else {
+                    console.log(chalk.blue(`📱 Using PAIRING_NUMBER: ${phoneNumberInput}`));
                 }
-            }, 3000)
+
+                // Clean number – only digits
+                phoneNumberInput = phoneNumberInput.replace(/[^0-9]/g, '')
+                
+                // Validate
+                const pn = require('awesome-phonenumber');
+                if (!pn('+' + phoneNumberInput).isValid()) {
+                    console.log(chalk.red('❌ Invalid phone number. Please enter full international number (e.g., 917384287404) without + or spaces.'));
+                    process.exit(1);
+                }
+
+                console.log(chalk.yellow(`\n⏳ Requesting pairing code for ${phoneNumberInput}...`));
+
+                setTimeout(async () => {
+                    try {
+                        // ✅ Custom pairing code "DEXSHYAM" (8 digits)
+                        let code = await XeonBotInc.requestPairingCode(phoneNumberInput.trim(), customPairingCode);
+                        code = code?.match(/.{1,4}/g)?.join("-") || code
+                        console.log(chalk.black(chalk.bgGreen(`\n📱 Your Pairing Code : `)), chalk.black(chalk.white(` ${code} `)))
+                        console.log(chalk.yellow(`\n📲 Please enter this code in your WhatsApp app:\n1. Open WhatsApp\n2. Settings > Linked Devices\n3. Tap "Link a Device"\n4. Enter the code shown above\n`))
+                    } catch (error) {
+                        console.error('Error requesting pairing code:', error)
+                        // ✅ Fallback: try without custom code
+                        try {
+                            console.log(chalk.yellow('⚠️ Custom code failed, trying without...'));
+                            let code = await XeonBotInc.requestPairingCode(phoneNumberInput.trim());
+                            code = code?.match(/.{1,4}/g)?.join("-") || code
+                            console.log(chalk.black(chalk.bgGreen(`\n📱 Your Pairing Code : `)), chalk.black(chalk.white(` ${code} `)))
+                            console.log(chalk.yellow(`\n📲 Please enter this code in your WhatsApp app.\n`))
+                        } catch (e2) {
+                            console.log(chalk.red('❌ Failed to get pairing code. Please check your number and try again.'));
+                        }
+                    }
+                }, 3000)
+            }
         }
 
         // Connection handling
         XeonBotInc.ev.on('connection.update', async (s) => {
             const { connection, lastDisconnect, qr } = s
-            
             if (qr) {
-                console.log(chalk.yellow('📱 QR Code generated. Please scan with WhatsApp.'))
+                console.log(chalk.yellow('📱 QR Code generated. This should not happen in pairing mode.'))
             }
-            
             if (connection === 'connecting') {
                 console.log(chalk.yellow('🔄 Connecting to WhatsApp...'))
             }
-            
             if (connection == "open") {
                 console.log(chalk.magenta(` `))
-                console.log(chalk.yellow(`🌿Connected to => ` + JSON.stringify(XeonBotInc.user, null, 2)))
+                console.log(chalk.yellow(`🌿 Connected to => ` + JSON.stringify(XeonBotInc.user, null, 2)))
 
                 try {
                     const botNumber = XeonBotInc.user.id.split(':')[0] + '@s.whatsapp.net';
                     await XeonBotInc.sendMessage(botNumber, {
-                        text: `🤖 Bot Connected Successfully!\n\n⏰ Time: ${new Date().toLocaleString()}\n✅ Status: Online and Ready!\n\n✅Make sure to join below channel`,
+                        text: `🤖 Bot Connected Successfully!\n\n⏰ Time: ${new Date().toLocaleString()}\n✅ Status: Online and Ready!`,
                         contextInfo: {
                             forwardingScore: 1,
                             isForwarded: true,
@@ -286,13 +411,10 @@ async function startXeonBotInc() {
                 console.log(chalk.green(`${global.themeemoji || '•'} 🤖 Bot Connected Successfully! ✅`))
                 console.log(chalk.blue(`Bot Version: ${settings.version}`))
             }
-            
             if (connection === 'close') {
                 const shouldReconnect = (lastDisconnect?.error)?.output?.statusCode !== DisconnectReason.loggedOut
                 const statusCode = lastDisconnect?.error?.output?.statusCode
-                
                 console.log(chalk.red(`Connection closed due to ${lastDisconnect?.error}, reconnecting ${shouldReconnect}`))
-                
                 if (statusCode === DisconnectReason.loggedOut || statusCode === 401) {
                     try {
                         rmSync('./session', { recursive: true, force: true })
@@ -302,7 +424,6 @@ async function startXeonBotInc() {
                     }
                     console.log(chalk.red('Session logged out. Please re-authenticate.'))
                 }
-                
                 if (shouldReconnect) {
                     console.log(chalk.yellow('Reconnecting...'))
                     await delay(5000)
@@ -342,16 +463,12 @@ async function startXeonBotInc() {
             } catch (e) {}
         });
 
-        // Group participant update
         XeonBotInc.ev.on('group-participants.update', async (update) => {
             await handleGroupParticipantUpdate(XeonBotInc, update);
         });
-
-        // Status updates – only one listener (status handled inside main messages.upsert as well)
         XeonBotInc.ev.on('status.update', async (status) => {
             await handleStatus(XeonBotInc, status);
         });
-
         XeonBotInc.ev.on('messages.reaction', async (status) => {
             await handleStatus(XeonBotInc, status);
         });
@@ -364,7 +481,6 @@ async function startXeonBotInc() {
     }
 }
 
-// Start bot
 startXeonBotInc().catch(error => {
     console.error('Fatal error:', error)
     process.exit(1)
